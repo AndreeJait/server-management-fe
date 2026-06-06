@@ -1,9 +1,3 @@
-declare global {
-  interface Window {
-    __ENV?: Record<string, string>;
-  }
-}
-
 const API_BASE = (typeof window !== "undefined" && window.__ENV?.NEXT_PUBLIC_API_URL)
   || process.env.NEXT_PUBLIC_API_URL
   || "http://localhost:8080";

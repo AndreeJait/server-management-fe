@@ -5,7 +5,9 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_BASE = (typeof window !== "undefined" && window.__ENV?.NEXT_PUBLIC_API_URL)
+  || process.env.NEXT_PUBLIC_API_URL
+  || "http://localhost:8080";
 
 const SHELL_OPTIONS = [
   { value: "/bin/sh", label: "sh" },
