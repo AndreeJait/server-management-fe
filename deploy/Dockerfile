@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Cache dependency downloads
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --config.minimum-release-age=0
 
 # Copy source code
 COPY . .
