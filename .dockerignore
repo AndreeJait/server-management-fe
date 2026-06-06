@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Dependencies (rebuilt during build)
+node_modules
+
+# Next.js build cache
+.next/
+out/
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Env files
+.env*
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Coverage
+coverage/
+
+# Vercel
+.vercel
+
+# Claude Code
+.claude/
+CLAUDE.md
