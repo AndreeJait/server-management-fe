@@ -669,8 +669,10 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
   const [deletingFolder, setDeletingFolder] = useState(false);
 
   // Derive folders from volume mounts that match the base_path pattern
-  const basePath = app.base_path || app.docker_host_base || "/home/user/docker";
-  const appBasePrefix = `${basePath}/${app.app_id}/`;
+  // docker_host_base = live config value; base_path = per-app override (only if user explicitly set it)
+  // docker_host_base takes priority since it reflects the actual running config
+  const basePath = app.docker_host_base || app.base_path || "";
+  const appBasePrefix = basePath ? `${basePath}/${app.app_id}/` : "";
   const folders = (app.volume_mounts || []).filter(
     (m) => m.host_path.startsWith(appBasePrefix)
   );
@@ -835,7 +837,7 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
   }
 
   const isEditing = creating || editing !== null;
-  const hostBase = `${basePath}/${app.app_id}/files`;
+  const hostBase = basePath ? `${basePath}/${app.app_id}/files` : `${app.app_id}/files`;
 
   return (
     <div className="space-y-6">
@@ -847,13 +849,13 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
           <h2 className="text-sm font-semibold text-zinc-900">Folders</h2>
         </div>
         <p className="text-xs text-zinc-500 mb-4">
-          Create directories on the host that are automatically mounted into your container. Folders are persisted at <code className="text-zinc-700 bg-zinc-100 px-1 rounded">{basePath}/{app.app_id}/</code>.
+          Create directories on the host that are automatically mounted into your container. Folders are persisted at <code className="text-zinc-700 bg-zinc-100 px-1 rounded">{basePath ? `${basePath}/${app.app_id}/` : `${app.app_id}/`}</code>.
         </p>
         {canWrite && (
           <div className="flex items-center gap-2 mb-4">
             <div className="flex-1 flex">
               <span className="inline-flex items-center h-9 px-3 rounded-l-lg border border-r-0 border-zinc-200 bg-zinc-50 text-xs text-zinc-500 font-mono whitespace-nowrap">
-                {basePath}/{app.app_id}/
+                {basePath ? `${basePath}/${app.app_id}/` : `${app.app_id}/`}
               </span>
               <input
                 className="flex-1 h-9 rounded-r-lg border border-zinc-200 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500"
