@@ -16,6 +16,7 @@ import {
   Network,
   Lock,
   ArrowLeftRight,
+  Settings,
 } from "lucide-react";
 
 type NavChild = { href: string; label: string; icon: typeof LayoutDashboard };
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
     children: [
       { href: "/dashboard/admin/users", label: "Users", icon: Users },
       { href: "/dashboard/admin/roles", label: "Roles", icon: Shield },
+      { href: "/dashboard/admin/configuration", label: "Configuration", icon: Settings },
     ],
   },
 ];

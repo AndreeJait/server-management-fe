@@ -135,7 +135,23 @@ export type AppResponse = {
   post_deploy_commands?: string[];
   base_path?: string;
   default_image?: string;
+  docker_host_base?: string;
+  files_mount_path?: string;
   created_at: string;
+};
+
+export type UpdateAppRequest = {
+  name?: string;
+  framework_preset?: string;
+  env_vars?: Record<string, string>;
+  volume_mounts?: VolumeMount[];
+  post_deploy_commands?: string[];
+  base_path?: string;
+  default_image?: string;
+  container_port?: string;
+  publish_port?: string;
+  container_name?: string;
+  files_mount_path?: string;
 };
 
 export type RegistryCredentialResponse = {
@@ -160,19 +176,6 @@ export type UpdateProjectRequest = {
 export type CreateAppRequest = {
   name: string;
   framework_preset: string;
-};
-
-export type UpdateAppRequest = {
-  name?: string;
-  framework_preset?: string;
-  env_vars?: Record<string, string>;
-  volume_mounts?: VolumeMount[];
-  post_deploy_commands?: string[];
-  base_path?: string;
-  default_image?: string;
-  container_port?: string;
-  publish_port?: string;
-  container_name?: string;
 };
 
 export type CreateAppResponse = {
@@ -263,6 +266,9 @@ export type AppFileResponse = {
   app_id: string;
   path: string;
   content: string;
+  file_type: "text" | "binary";
+  file_size: number;
+  mime_type: string;
   created_at: string;
   updated_at: string;
 };
@@ -363,4 +369,42 @@ export type ProxyStateResponse = {
   health_check_interval: number;
   status: string;
   created_at: string;
+};
+
+// Phase 7 — Configuration
+
+export type SettingResponse = {
+  section: string;
+  key: string;
+  value: string;
+  type: string;
+};
+
+export type SettingsGroup = {
+  section: string;
+  settings: SettingResponse[];
+};
+
+export type UpdateSettingInput = {
+  section: string;
+  key: string;
+  value: string;
+};
+
+export type SettingApplied = {
+  section: string;
+  key: string;
+  value: string;
+  hot_reloaded: boolean;
+};
+
+export type UpdateSettingsResult = {
+  applied: SettingApplied[];
+  restart_required: string[];
+};
+
+export type DomainRequestCountResponse = {
+  domain: string;
+  count: number;
+  last_request_at: string;
 };

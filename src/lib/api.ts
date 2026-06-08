@@ -230,6 +230,37 @@ export const api = {
         `/projects/${projectId}/apps/${appId}/files/${fileId}`,
         { method: "DELETE" }
       ),
+    upload: async (projectId: number, appId: string, path: string, file: File): Promise<import("@/types").AppFileResponse> => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("path", path);
+      const res = await fetch(`${API_BASE}/projects/${projectId}/apps/${appId}/files/upload`, {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+      if (res.status === 401 && typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+        throw new ApiClientError(401, { status_code: 401, message: "Unauthorized" });
+      }
+      const body = await res.json();
+      if (!res.ok) throw new ApiClientError(res.status, body);
+      return body.data as import("@/types").AppFileResponse;
+    },
+    download: async (projectId: number, appId: string, fileId: number): Promise<Blob> => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch(`${API_BASE}/projects/${projectId}/apps/${appId}/files/${fileId}/download`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) throw new ApiClientError(res.status, { status_code: res.status, message: "Download failed" });
+      return res.blob();
+    },
   },
   folders: {
     create: (projectId: number, appId: string, path: string) =>
@@ -320,5 +351,18 @@ export const api = {
       request<import("@/types").ProxyStateResponse>(`/proxy/state/${appId}/rollback`, {
         method: "POST",
       }),
+  },
+  config: {
+    getSettings: () =>
+      request<import("@/types").SettingsGroup[]>("/config/settings"),
+    getSettingsBySection: (section: string) =>
+      request<import("@/types").SettingsGroup>(`/config/settings/${section}`),
+    updateSettings: (settings: import("@/types").UpdateSettingInput[]) =>
+      request<import("@/types").UpdateSettingsResult>("/config/settings", {
+        method: "PUT",
+        body: JSON.stringify({ settings }),
+      }),
+    getAccessStats: () =>
+      request<import("@/types").DomainRequestCountResponse[]>("/config/proxy/access-stats"),
   },
 };

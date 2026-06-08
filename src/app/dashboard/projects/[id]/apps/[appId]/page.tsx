@@ -49,6 +49,8 @@ import {
   Rocket,
   Square,
   Trash2 as Trash2Icon,
+  Upload,
+  Download,
 } from "lucide-react";
 
 const DEPLOYMENT_STATUS_CONFIG: Record<DeploymentStatus, { label: string; color: string; icon: typeof CheckCircle2 }> = {
@@ -344,6 +346,7 @@ function SettingsPanel({ app, projectId, appId, onSaved }: { app: AppResponse; p
   const [containerPort, setContainerPort] = useState(app.container_port || "");
   const [publishPort, setPublishPort] = useState(app.publish_port || "");
   const [containerName, setContainerName] = useState(app.container_name || "");
+  const [filesMountPath, setFilesMountPath] = useState(app.files_mount_path || "/app/files");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -361,6 +364,7 @@ function SettingsPanel({ app, projectId, appId, onSaved }: { app: AppResponse; p
         container_port: containerPort,
         publish_port: publishPort,
         container_name: containerName,
+        files_mount_path: filesMountPath,
       });
       onSaved();
     } catch (err: any) {
@@ -564,6 +568,21 @@ function SettingsPanel({ app, projectId, appId, onSaved }: { app: AppResponse; p
         )}
       </div>
 
+      {/* Files Mount Path */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-6">
+        <h2 className="text-sm font-semibold text-zinc-900 mb-2">Files Mount Path</h2>
+        <p className="text-xs text-zinc-500 mb-4">
+          The container directory where app files (created or uploaded) are mounted. Uploaded and created files are stored on the host and bind-mounted into the container at this path.
+        </p>
+        <input
+          className="w-full h-9 rounded-lg border border-zinc-200 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500"
+          placeholder="/app/files"
+          value={filesMountPath}
+          onChange={(e) => setFilesMountPath(e.target.value)}
+        />
+        <p className="text-[11px] text-zinc-400 mt-1">Default: /app/files. Change takes effect on next deployment.</p>
+      </div>
+
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           <Save className="h-4 w-4" />
@@ -636,6 +655,13 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
   const [deleteTarget, setDeleteTarget] = useState<AppFileResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Upload state
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadPath, setUploadPath] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
   // Folder state
   const [newFolderPath, setNewFolderPath] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
@@ -643,7 +669,7 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
   const [deletingFolder, setDeletingFolder] = useState(false);
 
   // Derive folders from volume mounts that match the base_path pattern
-  const basePath = app.base_path || "/home/user/docker";
+  const basePath = app.base_path || app.docker_host_base || "/home/user/docker";
   const appBasePrefix = `${basePath}/${app.app_id}/`;
   const folders = (app.volume_mounts || []).filter(
     (m) => m.host_path.startsWith(appBasePrefix)
@@ -670,7 +696,41 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
     setPath("");
     setContent("");
     setLanguage("plaintext");
-    setError("");
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const p = uploadPath || uploadFile.name;
+      await api.files.upload(projectId, String(appId), p, uploadFile);
+      setUploadOpen(false);
+      setUploadFile(null);
+      setUploadPath("");
+      fetchFiles();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      setUploadError(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownload = async (file: AppFileResponse) => {
+    try {
+      const blob = await api.files.download(projectId, String(appId), file.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.path.split("/").pop() || "file";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // download failed
+    }
   };
 
   const handleEdit = (file: AppFileResponse) => {
@@ -913,9 +973,14 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-zinc-900">Files</h2>
             {canWrite && (
-              <Button variant="outline" size="sm" onClick={handleCreate}>
-                <Plus className="h-3.5 w-3.5" />Add File
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setUploadOpen(true); setUploadPath(""); setUploadFile(null); setUploadError(""); }}>
+                  <Upload className="h-3.5 w-3.5" />Upload
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleCreate}>
+                  <Plus className="h-3.5 w-3.5" />Add File
+                </Button>
+              </div>
             )}
           </div>
           <p className="text-xs text-zinc-500 mb-4">
@@ -932,21 +997,34 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
                 <div key={f.id} className="flex items-center gap-3 rounded-lg border border-zinc-100 px-4 py-3 hover:bg-zinc-50/50 transition-colors">
                   <FileText className="h-4 w-4 text-zinc-400 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono text-zinc-900 truncate">{f.path}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-mono text-zinc-900 truncate">{f.path}</p>
+                      {f.file_type === "binary" ? (
+                        <Badge variant="secondary">Binary</Badge>
+                      ) : (
+                        <Badge variant="default">Text</Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-zinc-400 mt-0.5">
                       Host: {hostBase}{f.path.startsWith("/") ? f.path : "/" + f.path}
+                      {f.file_type === "binary" && f.file_size > 0 && (
+                        <span className="ml-2">{(f.file_size / 1024).toFixed(1)} KB</span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    <button onClick={() => handleDownload(f)} className="text-zinc-400 hover:text-zinc-600 transition-colors p-1" title="Download">
+                      <Download className="h-3.5 w-3.5" />
+                    </button>
+                    {canWrite && f.file_type === "text" && (
+                      <button onClick={() => handleEdit(f)} className="text-zinc-400 hover:text-zinc-600 transition-colors p-1">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     {canWrite && (
-                      <>
-                        <button onClick={() => handleEdit(f)} className="text-zinc-400 hover:text-zinc-600 transition-colors p-1">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => setDeleteTarget(f)} className="text-zinc-400 hover:text-red-500 transition-colors p-1">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </>
+                      <button onClick={() => setDeleteTarget(f)} className="text-zinc-400 hover:text-red-500 transition-colors p-1">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -987,6 +1065,57 @@ function FilesPanel({ app, projectId, appId, onAppUpdated }: { app: AppResponse;
             <Button variant="outline" onClick={() => setDeleteFolderPath(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteFolder} disabled={deletingFolder}>
               {deletingFolder ? "Deleting..." : "Delete Folder"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload File Dialog */}
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload File</DialogTitle>
+            <DialogDescription>
+              Upload a file to the app's files directory. It will be stored on the host and mounted into the container.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 mb-1.5">File</label>
+              <input
+                type="file"
+                className="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  setUploadFile(f || null);
+                  if (f && !uploadPath) setUploadPath(f.name);
+                }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 mb-1.5">Path (relative to files directory)</label>
+              <input
+                className="w-full h-9 rounded-lg border border-zinc-200 px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500"
+                placeholder="e.g., config/app.yaml"
+                value={uploadPath}
+                onChange={(e) => setUploadPath(e.target.value)}
+              />
+              <p className="text-[11px] text-zinc-400 mt-1">
+                The file will be available at <code className="text-zinc-500">{app?.files_mount_path || "/app/files"}/{uploadPath || "..."}</code> inside the container.
+              </p>
+            </div>
+            {uploadError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{uploadError}</div>
+            )}
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setUploadOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpload} disabled={!uploadFile || uploading}>
+              {uploading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />Uploading...</>
+              ) : (
+                <><Upload className="h-4 w-4" />Upload</>
+              )}
             </Button>
           </div>
         </DialogContent>
