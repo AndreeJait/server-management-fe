@@ -17,6 +17,7 @@ import {
   Lock,
   ArrowLeftRight,
   Settings,
+  Terminal,
 } from "lucide-react";
 
 type NavChild = { href: string; label: string; icon: typeof LayoutDashboard };
@@ -41,6 +42,14 @@ const navItems: NavItem[] = [
     permission: "proxy:read",
     children: [
       { href: "/dashboard/proxy", label: "Status", icon: ArrowLeftRight },
+    ],
+  },
+  {
+    label: "SSH",
+    icon: Terminal,
+    permission: "ssh:read",
+    children: [
+      { href: "/dashboard/ssh", label: "Hosts", icon: Terminal },
     ],
   },
   {

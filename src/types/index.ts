@@ -71,6 +71,9 @@ export const PERMISSIONS = [
   "cloudflare:write",
   "proxy:read",
   "proxy:write",
+  "ssh:read",
+  "ssh:write",
+  "ssh:connect",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -82,6 +85,7 @@ export const PERMISSION_GROUPS: Record<string, Permission[]> = {
   Configs: ["configs:read", "configs:write"],
   Cloudflare: ["cloudflare:read", "cloudflare:write"],
   Proxy: ["proxy:read", "proxy:write"],
+  SSH: ["ssh:read", "ssh:write", "ssh:connect"],
 };
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
@@ -93,6 +97,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "configs:read", "configs:write",
     "cloudflare:read", "cloudflare:write",
     "proxy:read",
+    "ssh:read", "ssh:write", "ssh:connect",
   ],
   viewer: [
     "users:read",
@@ -101,6 +106,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "configs:read",
     "cloudflare:read",
     "proxy:read",
+    "ssh:read",
   ],
 };
 
@@ -407,4 +413,39 @@ export type DomainRequestCountResponse = {
   domain: string;
   count: number;
   last_request_at: string;
+};
+
+// SSH
+
+export type SSHHostResponse = {
+  id: number;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  auth_method: "password" | "private_key";
+  has_password: boolean;
+  has_private_key: boolean;
+  owner_id: number;
+  created_at: string;
+};
+
+export type CreateSSHHostRequest = {
+  name: string;
+  host: string;
+  port?: number;
+  username: string;
+  auth_method: "password" | "private_key";
+  password?: string;
+  private_key?: string;
+};
+
+export type UpdateSSHHostRequest = {
+  name: string;
+  host: string;
+  port?: number;
+  username: string;
+  auth_method: "password" | "private_key";
+  password?: string;
+  private_key?: string;
 };

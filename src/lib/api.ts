@@ -365,4 +365,22 @@ export const api = {
     getAccessStats: () =>
       request<import("@/types").DomainRequestCountResponse[]>("/config/proxy/access-stats"),
   },
+  ssh: {
+    listHosts: () =>
+      request<import("@/types").SSHHostResponse[]>("/ssh/hosts"),
+    getHost: (hostId: number) =>
+      request<import("@/types").SSHHostResponse>(`/ssh/hosts/${hostId}`),
+    createHost: (data: import("@/types").CreateSSHHostRequest) =>
+      request<import("@/types").SSHHostResponse>("/ssh/hosts", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateHost: (hostId: number, data: import("@/types").UpdateSSHHostRequest) =>
+      request<import("@/types").SSHHostResponse>(`/ssh/hosts/${hostId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    deleteHost: (hostId: number) =>
+      request<void>(`/ssh/hosts/${hostId}`, { method: "DELETE" }),
+  },
 };
